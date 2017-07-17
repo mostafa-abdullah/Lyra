@@ -62,6 +62,12 @@ class Z3Types:
 
         self.classes = get_classes(type_sort, classes_to_instance_attrs)
 
+        self.interfaces = {
+            "Hashable": type_sort.Hashable,
+            "Iterable": type_sort.Iterable,
+            "Sized": type_sort.Sized
+        }
+
         # Encode subtyping relationships
         self.subtype = Function("subtype", type_sort, type_sort, BoolSort())
         self.extends = Function("extends", type_sort, type_sort, BoolSort())
@@ -90,27 +96,93 @@ class Z3Types:
         ]
 
         self.axioms = ([
-                      self.extends(self.none, self.object),
-                      self.extends(self.num, self.object),
-                      self.extends(self.complex, self.num),
-                      self.extends(self.float, self.complex),
-                      self.extends(self.int, self.float),
-                      self.extends(self.bool, self.int),
-                      self.extends(self.seq, self.object),
-                      self.extends(self.string, self.seq),
-                      self.extends(self.bytes, self.seq),
-                      self.extends(self.tuple, self.seq),
+                           self.extends(self.none, self.object),
+                           self.extends(self.num, self.object),
+                           self.extends(self.complex, self.num),
+                           self.extends(self.float, self.complex),
+                           self.extends(self.int, self.float),
+                           self.extends(self.bool, self.int),
+                           self.extends(self.seq, self.object),
+                           self.extends(self.string, self.seq),
+                           self.extends(self.bytes, self.seq),
+                           self.extends(self.tuple, self.seq),
 
-                      self.extends(self.func, self.object),
+                           self.extends(self.func, self.object),
 
-                      ForAll([x], self.extends(self.type(x), self.object), patterns=[self.type(x)]),
-                      ForAll([x], self.extends(self.list(x), self.seq), patterns=[self.list(x)]),
-                      ForAll([x], self.extends(self.set(x), self.object), patterns=[self.set(x)]),
-                      ForAll([x, y], self.extends(self.dict(x, y), self.object), patterns=[self.dict(x, y)]),
-                  ]
-                  + self.tuples_subtype_axioms()
-                  + self.functions_subtype_axioms()
-                  + self.classes_subtype_axioms(class_to_base))
+                           ForAll([x], self.extends(self.type(x), self.object), patterns=[self.type(x)]),
+                           ForAll([x], self.extends(self.list(x), self.seq), patterns=[self.list(x)]),
+                           ForAll([x], self.extends(self.set(x), self.object), patterns=[self.set(x)]),
+                           ForAll([x, y], self.extends(self.dict(x, y), self.object), patterns=[self.dict(x, y)]),
+                       ]
+                       + self.tuples_subtype_axioms()
+                       + self.functions_subtype_axioms()
+                       + self.classes_subtype_axioms(class_to_base)
+                       + self.get_interfaces_axioms(list(classes_to_instance_attrs.keys())))
+
+    def get_interfaces_axioms(self, classes_names):
+        x = Const("x", self.type_sort)
+        y = Const("y", self.type_sort)
+
+        hashable_axioms = [
+            self.subtype(self.tuple, self.interfaces["Hashable"]),
+            self.subtype(self.complex, self.interfaces["Hashable"]),
+            self.subtype(self.string, self.interfaces["Hashable"]),
+            self.subtype(self.bytes, self.interfaces["Hashable"]),
+            ForAll(x, self.subtype(self.type(x), self.interfaces["Hashable"]),
+                   patterns=[self.type(x)])
+        ]
+
+        hashable_poss = [x == self.interfaces["Hashable"],
+                         self.subtype(x, self.tuple),
+                         self.subtype(x, self.complex),
+                         self.subtype(x, self.string),
+                         self.subtype(x, self.bytes)]
+        for t in classes_names:
+            class_type = getattr(self.type_sort, "class_{}".format(t))
+            hashable_axioms.append(self.subtype(class_type, self.interfaces["Hashable"]))
+
+            hashable_poss.append(x == self.type(class_type))
+            hashable_poss.append(self.subtype(x, class_type))
+
+        hashable_axioms.append(ForAll(x, Implies(self.subtype(x, self.interfaces["Hashable"]),
+                                                 Or(hashable_poss))))
+
+        sized_axioms = [
+            self.subtype(self.seq, self.interfaces["Sized"]),
+            ForAll(x, self.subtype(self.set(x), self.interfaces["Sized"]), patterns=[self.set(x)]),
+            ForAll([x, y], self.subtype(self.dict(x, y), self.interfaces["Sized"]),
+                   patterns=[self.dict(x, y)]),
+
+            ForAll([x], Implies(self.subtype(x, self.interfaces["Sized"]),
+                                Or(x == self.interfaces["Sized"],
+                                   self.subtype(x, self.seq),
+                                   x == self.set(self.set_type(x)),
+                                   x == self.dict(self.dict_key_type(x), self.dict_value_type(x)))),
+                   patterns=[self.subtype(x, self.interfaces["Sized"])]),
+        ]
+
+        iterable_axioms = [
+            ForAll(x, self.subtype(self.list(x), self.interfaces["Iterable"](x)),
+                   patterns=[self.list(x)]),
+            ForAll([x, y], self.subtype(self.dict(x, y), self.interfaces["Iterable"](x)),
+                   patterns=[self.dict(x, y)]),
+            ForAll(x, self.subtype(self.set(x), self.interfaces["Iterable"](x)),
+                   patterns=[self.set(x)]),
+            self.subtype(self.string, self.interfaces["Iterable"](self.string)),
+            self.subtype(self.bytes, self.interfaces["Iterable"](self.bytes)),
+
+            ForAll([x, y], Implies(self.subtype(x, self.interfaces["Iterable"](y)),
+                                   Or(
+                                       x == self.list(y),
+                                       x == self.dict(y, self.dict_value_type(x)),
+                                       x == self.set(y),
+                                       And(x == self.string, y == self.string),
+                                       And(x == self.bytes, y == self.bytes)
+                                   )),
+                   patterns=[self.subtype(x, self.interfaces["Iterable"](y))])
+        ]
+
+        return sized_axioms + hashable_axioms + iterable_axioms
 
     def tuples_subtype_axioms(self):
         """Add the axioms for the tuples subtyping"""
@@ -194,6 +266,10 @@ def declare_type_sort(max_tuple_length, max_function_args, classes_to_instance_a
     type_sort.declare("float")
     type_sort.declare("int")
     type_sort.declare("bool")
+
+    type_sort.declare("Hashable")
+    type_sort.declare("Iterable", ("iterable_type", type_sort))
+    type_sort.declare("Sized")
 
     type_sort.declare("sequence")
     type_sort.declare("str")
@@ -289,6 +365,7 @@ def invert_dict(d):
 
     return result
 
+
 set_param("auto-config", False)
 set_param("smt.mbqi", False)
 set_param("model.v2", True)
@@ -301,17 +378,17 @@ set_param("smt.delay_units", True)
 set_param("smt.delay_units_threshold", 16)
 set_param("nnf.sk_hack", True)
 set_param("smt.qi.eager_threshold", 100)
-set_param("smt.qi.cost",  "(+ weight generation)")
+set_param("smt.qi.cost", "(+ weight generation)")
 set_param("type_check", True)
 set_param("smt.bv.reflect", True)
+set_param("unsat_core", True)
 
 
 class TypesSolver(Solver):
     """Z3 solver that has all the type system axioms initialized."""
+
     def __init__(self, tree, solver=None, ctx=None):
         super().__init__(solver, ctx)
-
-        self.set(auto_config=False, mbqi=False, unsat_core=True)
 
         self.element_id = 0  # Unique id given to newly created Z3 consts
         self.assertions_vars = []
