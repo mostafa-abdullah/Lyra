@@ -128,8 +128,6 @@ class Z3Types:
             self.subtype(self.complex, self.interfaces["Hashable"]),
             self.subtype(self.string, self.interfaces["Hashable"]),
             self.subtype(self.bytes, self.interfaces["Hashable"]),
-            ForAll(x, self.subtype(self.type(x), self.interfaces["Hashable"]),
-                   patterns=[self.type(x)])
         ]
 
         hashable_poss = [x == self.interfaces["Hashable"],
@@ -140,7 +138,7 @@ class Z3Types:
         for t in classes_names:
             class_type = getattr(self.type_sort, "class_{}".format(t))
             hashable_axioms.append(self.subtype(class_type, self.interfaces["Hashable"]))
-
+            hashable_axioms.append(self.subtype(self.type(class_type), self.interfaces["Hashable"]))
             hashable_poss.append(x == self.type(class_type))
             hashable_poss.append(self.subtype(x, class_type))
 
