@@ -168,12 +168,14 @@ class Z3Types:
                    patterns=[self.set(x)]),
             self.subtype(self.string, self.interfaces["Iterable"](self.string)),
             self.subtype(self.bytes, self.interfaces["Iterable"](self.bytes)),
+            self.subtype(self.tuple, self.interfaces["Iterable"](self.object)),
 
             ForAll([x, y], Implies(self.subtype(x, self.interfaces["Iterable"](y)),
                                    Or(
                                        x == self.list(y),
                                        x == self.dict(y, self.dict_value_type(x)),
                                        x == self.set(y),
+                                       And(self.subtype(x, self.tuple), y == self.object),
                                        And(x == self.string, y == self.string),
                                        And(x == self.bytes, y == self.bytes)
                                    )),

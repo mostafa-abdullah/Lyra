@@ -15,7 +15,7 @@ class AnnotationResolver:
             "str": z3_types.string,
             "bytes": z3_types.bytes,
             "number": z3_types.num,
-            "sequence": z3_types.seq
+            "sequence": z3_types.seq,
         }
         self.type_var_poss = {}
         self.type_var_super = {}
@@ -42,7 +42,8 @@ class AnnotationResolver:
                 return self.primitives[annotation.id]
             if annotation.id in self.z3_types.all_types:
                 return getattr(self.z3_types.type_sort, "class_{}".format(annotation.id))
-            
+            if annotation.id in self.z3_types.interfaces:
+                return self.z3_types.interfaces[annotation.id]
             # Check if it's a generic type var
             if generics_map is None:
                 raise ValueError("Invalid type annotation {} in line {}".format(annotation.id, annotation.lineno))
@@ -150,6 +151,9 @@ class AnnotationResolver:
                            fail_message="Union in type annotation in line {}".format(annotation.lineno))
 
                 return result_type
+
+            if annotation_val == "Iterable":
+                return self.z3_types.interfaces["Iterable"](self.resolve(annotation.slice.value, solver, generics_map))
 
         raise ValueError("Invalid type annotation in line {}".format(annotation.lineno))
 
