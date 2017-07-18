@@ -198,7 +198,7 @@ def index(indexed, ind, result, types):
              And(types.subtype(ind, types.int), indexed == types.list(result)),
              And(types.subtype(ind, types.int), indexed == types.string, result == types.string),
              And(types.subtype(ind, types.int), indexed == types.bytes, result == types.bytes)]
-            + t
+            + [And(Or(t), types.subtype(ind, types.int))]
         )
     ]
 
@@ -346,11 +346,7 @@ def for_loop(iterable, target, types):
     """Constraints for for-loop iterable and iteration target"""
     return [
         Or(
-            iterable == types.list(target),
-            iterable == types.set(target),
-            iterable == types.dict(target, types.dict_value_type(iterable)),
-            And(iterable == types.string, target == types.string),
-            And(iterable == types.bytes, target == types.bytes)
+            types.subtype(iterable, types.interfaces["Iterable"](target)),
         )
     ]
 

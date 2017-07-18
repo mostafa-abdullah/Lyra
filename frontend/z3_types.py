@@ -113,6 +113,12 @@ class Z3Types:
                            ForAll([x], self.extends(self.list(x), self.seq), patterns=[self.list(x)]),
                            ForAll([x], self.extends(self.set(x), self.object), patterns=[self.set(x)]),
                            ForAll([x, y], self.extends(self.dict(x, y), self.object), patterns=[self.dict(x, y)]),
+
+                           ForAll(x, Implies(x == self.dict(self.dict_key_type(x), self.dict_value_type(x)),
+                                             self.subtype(self.dict_key_type(x), self.interfaces["Hashable"]))),
+
+                           ForAll(x, Implies(x == self.set(self.set_type(x)),
+                                             self.subtype(self.set_type(x), self.interfaces["Hashable"])))
                        ]
                        + self.tuples_subtype_axioms()
                        + self.functions_subtype_axioms()
@@ -172,6 +178,7 @@ class Z3Types:
 
             ForAll([x, y], Implies(self.subtype(x, self.interfaces["Iterable"](y)),
                                    Or(
+                                       x == self.interfaces["Iterable"](y),
                                        x == self.list(y),
                                        x == self.dict(y, self.dict_value_type(x)),
                                        x == self.set(y),

@@ -1,5 +1,5 @@
 """Stub file for built in functions"""
-from typing import TypeVar, List, Tuple, Dict
+from typing import TypeVar, List, Tuple, Dict, Sized, Set
 
 T = TypeVar("T")
 U = TypeVar("U")
@@ -146,7 +146,7 @@ def int(_: NumOrStr) -> int:
     pass
 
 
-def len(_: Seq) -> int:
+def len(_: Sized) -> int:
     """ Return the number of items in a container. """
     pass
 
@@ -219,6 +219,11 @@ def round(_: float) -> int:
     This returns an int when called with one argument, otherwise the
     same type as the number. ndigits may be negative.
     """
+    pass
+
+
+def set() -> Set[T]:
+    """Return an empty set"""
     pass
 
 

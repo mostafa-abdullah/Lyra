@@ -15,7 +15,7 @@ class AnnotationResolver:
             "str": z3_types.string,
             "bytes": z3_types.bytes,
             "number": z3_types.num,
-            "sequence": z3_types.seq,
+            "sequence": z3_types.seq
         }
         self.type_var_poss = {}
         self.type_var_super = {}
@@ -89,7 +89,8 @@ class AnnotationResolver:
             
             if annotation_val == "Set":
                 # Parse Set type
-                return self.z3_types.set(self.resolve(annotation.slice.value, solver, generics_map))
+                set_type = self.resolve(annotation.slice.value, solver, generics_map)
+                return self.z3_types.set(set_type)
             
             if annotation_val == "Type":
                 # Parse Type type
