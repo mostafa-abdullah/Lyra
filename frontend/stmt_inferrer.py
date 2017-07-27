@@ -430,7 +430,9 @@ def _infer_func_def(node, context, solver):
 
     if node.returns:
         return_type = solver.resolve_annotation(node.returns)
-        if inference_config["ignore_fully_annotated_function"] and is_annotated(node):
+        if (inference_config["ignore_fully_annotated_function"] and is_annotated(node)
+           or isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Str)
+                and node.body[0].value.s[:11] == "ignore body"):
             body_type = return_type
         else:
             body_type = _infer_body(node.body, func_context, node.lineno, solver)
@@ -461,7 +463,7 @@ def _infer_class_def(node, context, solver):
 
     # Set the type of the first arg in the class methods to be instance of this class
     # TODO check staticmethod decorator
-    for func_name, args_count in solver.config.class_to_funcs[node.name]:
+    for func_name, args_count, _ in solver.config.class_to_funcs[node.name]:
         func_type = class_context.get_type(func_name)
         arg_accessor = getattr(solver.z3_types.type_sort, "func_{}_arg_1".format(args_count))
         solver.add(arg_accessor(func_type) == instance_type,

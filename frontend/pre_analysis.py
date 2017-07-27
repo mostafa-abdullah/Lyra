@@ -143,7 +143,7 @@ class PreAnalyzer:
                     # Add function to class attributes and get attributes defined by self.some_attribute = value
                     instance_attributes.add(cls_stmt.name)
                     class_attributes.add(cls_stmt.name)
-                    class_funcs.append((cls_stmt.name, len(cls_stmt.args.args)))
+                    class_funcs.append((cls_stmt.name, len(cls_stmt.args.args), cls_stmt.returns))
                     if not cls_stmt.args.args:
                         continue
                     first_arg = cls_stmt.args.args[0].arg  # In most cases it will be 'self'

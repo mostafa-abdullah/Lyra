@@ -86,7 +86,11 @@ class AnnotationResolver:
                 keys_type = self.resolve(annotation.slice.value.elts[0], solver, generics_map)
                 vals_type = self.resolve(annotation.slice.value.elts[1], solver, generics_map)
                 return self.z3_types.dict(keys_type, vals_type)
-            
+
+            if annotation_val == "Iterator":
+                # Parse Iterator type
+                return self.z3_types.iterator(self.resolve(annotation.slice.value, solver, generics_map))
+
             if annotation_val == "Set":
                 # Parse Set type
                 set_type = self.resolve(annotation.slice.value, solver, generics_map)
